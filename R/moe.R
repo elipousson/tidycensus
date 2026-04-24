@@ -10,25 +10,27 @@
 #' @return A margin of error for a derived sum
 #' @export
 moe_sum <- function(moe, estimate = NULL, na.rm = FALSE) {
+  if (is.null(estimate)) {
+    warning(
+      "You have not specified the estimates associated with the margins of error.  In the event that your calculation involves multiple zero estimates, this will unnaturally inflate the derived margin of error.",
+      call. = FALSE
+    )
+  }
+
+  forcalc <- moe
 
   if (!is.null(estimate)) {
     # ID those MOE values with 0 estimates
-    zeros <- estimate == 0
+    zeros <- estimate == 0 & !is.na(estimate)
+    zeros_moe <- moe[zeros & !is.na(moe)]
 
-    if (any(zeros)) {
+    if (any(zeros) && (length(zeros_moe) != 0)) {
       # Use the largest MOE among zero estimates (per Census guidance)
-      max_zero_moe <- max(moe[zeros], na.rm = TRUE)
+      max_zero_moe <- max(zeros_moe, na.rm = TRUE)
 
       # Combine with the non-zeros
       forcalc <- c(max_zero_moe, moe[!zeros])
-    } else {
-      forcalc <- moe
     }
-
-  } else if (is.null(estimate)) {
-    warning("You have not specified the estimates associated with the margins of error.  In the event that your calculation involves multiple zero estimates, this will unnaturally inflate the derived margin of error.", call. = FALSE)
-
-    forcalc <- moe
   }
 
   squared <- map_dbl(forcalc, function(x) x^2)
